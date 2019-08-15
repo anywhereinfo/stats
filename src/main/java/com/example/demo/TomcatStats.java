@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import java.lang.management.ManagementFactory;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Set;
 
@@ -44,7 +45,8 @@ public class TomcatStats {
     private long cumulativeProcessingTimeMs;
     @JsonProperty
     private long longestRequestProcessingTimeMs;
-    
+    @JsonProperty
+    private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
     
     @JsonCreator
     public TomcatStats()        {

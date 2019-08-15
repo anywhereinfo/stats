@@ -7,6 +7,7 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.RoundingMode;
+import java.sql.Timestamp;
 import java.text.DecimalFormat;
 
 import javax.annotation.Nullable;
@@ -42,6 +43,8 @@ public class CPUStats {
     private double systemCPUUsage;
     @JsonProperty
     private double processCPUUsage;
+    @JsonProperty
+    private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
 
     @JsonCreator
     public CPUStats() {

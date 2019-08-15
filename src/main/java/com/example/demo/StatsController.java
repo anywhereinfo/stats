@@ -1,7 +1,6 @@
 package com.example.demo;
 
 import java.sql.Timestamp;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -9,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.GCStats.GCDetail;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @RestController
@@ -56,7 +56,7 @@ public class StatsController {
         private MemoryStats memoryStats = new MemoryStats();
         
         @JsonProperty
-        private List<GCStats.GCInfo> gcInfos = gcStats.getGCInfo();
+        private GCDetail gcDetail = gcStats.getGCDetail();
         
  
 	}

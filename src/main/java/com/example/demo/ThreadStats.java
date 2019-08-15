@@ -2,6 +2,7 @@ package com.example.demo;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +20,8 @@ public class ThreadStats {
     int blockedCount = 0;
     @JsonProperty
     private List<String> blockedThreadNames = new ArrayList<>();
+    @JsonProperty
+    private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
 
     @JsonCreator
     public ThreadStats() {

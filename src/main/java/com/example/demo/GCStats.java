@@ -6,27 +6,33 @@ import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.management.NotificationEmitter;
 import javax.management.NotificationListener;
 import javax.management.openmbean.CompositeData;
 
+import org.apache.commons.collections4.QueueUtils;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
+
 
 public class GCStats {
 
     private String youngPoolName;
     private String oldPoolName;
-    private CircularFifoQueue<GCInfo> registry = new CircularFifoQueue<GCInfo>(100);
+    private Queue<GCInfo> registry = QueueUtils.synchronizedQueue(new CircularFifoQueue<GCInfo>(20));
+    private Map<GCSummaryKey, GCSummary> map = new HashMap<GCSummaryKey, GCSummary>();
 
     public GCStats() {
         for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
@@ -61,50 +67,63 @@ public class GCStats {
                 GcInfo gcInfo = notificationInfo.getGcInfo();
                 long duration = gcInfo.getDuration();
 
+                GCSummaryKey key = new GCSummaryKey(gcCause, gcAction);
+                synchronized(map) {
+                if (map.get(key) == null) {
+                	GCSummary summary = new GCSummary();
+                	summary.increment();
+                	map.put(key, summary);
+                	}
+                else {
+                	GCSummary summary = map.get(key);
+                	summary.increment();
+                	map.put(key, summary);
+                }
+                }
 
                 final Map<String, MemoryUsage> before = gcInfo.getMemoryUsageBeforeGc();
                 final Map<String, MemoryUsage> after = gcInfo.getMemoryUsageAfterGc();
 
                 if(oldPoolName != null) {
                   oldAfterMb = after.get(oldPoolName).getUsed()/ (1024*1024);
-//                  System.out.println("MB promoted in old gen: " + (oldAfterMb - oldBeforeMb));
+
                 }
 
                 if (youngPoolName != null) {
                     youngAfterBytes = after.get(youngPoolName).getUsed();
                     youngBytes = (before.get(youngPoolName).getUsed() - youngGenSizeAfter.get())/(1024*1024);
                     youngGenSizeAfter.set(youngAfterBytes);
-//                    if (delta > 0L)
-//                    	System.out.println("Bytes increased in young pool: " + delta);
+
                 }
-                synchronized (this) {
-                if (!isConcurrentPhase(gcCause)) {
+
                     registry.add(new GCInfo(duration, oldAfterMb, youngBytes, gcCause, gcAction ));
-                }
-                }
+
             };
 
             NotificationEmitter notificationEmitter = (NotificationEmitter) mbean;
             notificationEmitter.addNotificationListener(listener, null , null);
         }
     }
+    
 
-    public List<GCInfo> getGCInfo() {
+    public GCDetail getGCDetail() {
         ArrayList<GCInfo> gcInfos = new ArrayList<>();
-        synchronized(this) {
-        Iterator<GCInfo> iterator = registry.iterator();
-        while (iterator.hasNext())
-        {
-            gcInfos.add(iterator.next());
+        Map<GCSummaryKey, GCSummary> summaryMap = new HashMap<>();
+        synchronized(registry) {
+        	Iterator<GCInfo> iterator = registry.iterator();
+        	while (iterator.hasNext())
+        	{
+        		gcInfos.add(iterator.next());
+        	}
         }
-        registry.clear();
+        synchronized(map) {
+        	 for(GCSummaryKey key : map.keySet()) {
+        		 summaryMap.put(key, map.get(key));
+        	 }
         }
-        return gcInfos;
+        return new GCDetail(gcInfos, summaryMap);
     }
 
-    private boolean isConcurrentPhase(String cause) {
-        return "No GC".equals(cause);
-    }
 
     private boolean isYoungGenPool(String name) {
         return name.endsWith("Eden Space");
@@ -114,6 +133,20 @@ public class GCStats {
         return name.endsWith("Old Gen") || name.endsWith("Tenured Gen");
      }
 
+    public static class GCDetail {
+       	@JsonProperty
+    	private Map<GCSummaryKey, GCSummary> gcSummary;
+       	
+    	@JsonProperty
+    	private List<GCInfo> gcInfo ;
+    	
+    	@JsonCreator
+    	public GCDetail(final List<GCInfo> gcInfo, final Map<GCSummaryKey, GCSummary> map) {
+    		this.gcInfo = gcInfo;
+    		this.gcSummary = map;
+    	}
+    	
+    }
      public class GCInfo {
 
         @JsonProperty
@@ -149,6 +182,70 @@ public class GCStats {
             this.gcAction = gcAction;
             creationTimestamp = new Timestamp(System.currentTimeMillis());
         }
+     }
+     
+     public static class GCSummaryKey {
+    	 @JsonProperty
+    	 private String gcCause;
+    	 @JsonProperty
+    	 private String gcAction;
+    	 
+    	 @JsonCreator
+    	 public GCSummaryKey (final String gcCause, final String gcAction) {
+    		 this.gcAction= gcAction;
+    		 this .gcCause = gcCause;
+    	 }
+    	 
+    	 @Override
+    	 public boolean equals(Object obj) {
+    		 if (obj instanceof GCSummaryKey) {
+    			 GCSummaryKey temp = (GCSummaryKey) obj;
+    			 return( (this.gcAction.equals(temp.gcAction)) && (this.gcCause.equals(temp.gcCause)));
+    		 }
+    		 return false;
+    	 }
+    	 
+    	 @Override
+    	 public int hashCode() {
+    		 int result = 31 * gcCause.hashCode();
+    		 result += 31 * gcAction.hashCode();
+    		 return result;
+    	 }
+    	 
+    	 @Override
+    	 public String toString() {
+    		 return gcCause + "--" + gcAction;
+    	 }
+     }
+     
+     public static class GCSummary {
+    	 @JsonIgnore
+    	 private AtomicLong counter = new AtomicLong(0L);
+    	 @JsonProperty
+    	 private Timestamp timestamp;
+    	 
+    	 
+    	 @JsonCreator
+    	 public GCSummary() {
+    		 timestamp = new Timestamp(System.currentTimeMillis());
+    	 }
+    	 
+    	 @JsonIgnore
+    	 public void increment() {
+    		 counter.incrementAndGet();
+    		 timestamp = new Timestamp(System.currentTimeMillis());
+    	 }
+    	 
+    	 @JsonProperty
+    	 public long counter() {
+    		 return counter.get();
+    	 }
+    	 
+    	 @Override
+    	 
+    	 public String toString() {
+    		 return counter.get() + "--" + timestamp;
+    	 }
      }
 }
 

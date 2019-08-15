@@ -5,6 +5,7 @@ import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.math.RoundingMode;
+import java.sql.Timestamp;
 import java.text.DecimalFormat;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -21,6 +22,9 @@ public class MemoryStats {
 	
 	@JsonProperty
 	private MemoryByType memoryByTypes[] = new MemoryByType[3];
+	
+	@JsonProperty
+	private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
 	
 	@JsonCreator
 	public MemoryStats() {
