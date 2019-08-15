@@ -1,20 +1,20 @@
 package com.example.demo;
 
+import java.sql.Timestamp;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @RestController
 public class StatsController {
 
-	static AtomicReference<GCStats> gcStatsRef = new AtomicReference<GCStats>(new GCStats());
+	private static GCStats gcStats = new GCStats();
 	
 	@GetMapping("/api/v1/stats")
 	public Stats getStats() {
@@ -31,12 +31,15 @@ public class StatsController {
           return HttpStatus.OK;
     }
 	
-    private static void resetGCStats() {
-        gcStatsRef.set(new GCStats());
-    }
-    
+   
 	public class Stats {
         
+		@JsonProperty
+		private String id = UUID.randomUUID().toString();
+		
+		@JsonProperty
+		private Timestamp eventTimestamp = new Timestamp(System.currentTimeMillis());
+		
 		@JsonProperty
         private UptimeStats uptimeStats = new UptimeStats();
 		
@@ -53,12 +56,8 @@ public class StatsController {
         private MemoryStats memoryStats = new MemoryStats();
         
         @JsonProperty
-        private List<GCStats.GCInfo> gcInfos = gcStatsRef.get().getGCInfo();
+        private List<GCStats.GCInfo> gcInfos = gcStats.getGCInfo();
         
-        @JsonCreator
-        public Stats() {
-        	resetGCStats();
-        }
-        
+ 
 	}
 }

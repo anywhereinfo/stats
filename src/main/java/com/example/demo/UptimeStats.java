@@ -16,7 +16,7 @@ public class UptimeStats {
     private final RuntimeMXBean runtimeMXBean;
 
     @JsonProperty
-    private long jvmUptime_Ms;
+    private long jvmUptimeMs;
 
     @JsonProperty
     private String jvmStartTime;
@@ -24,7 +24,7 @@ public class UptimeStats {
     @JsonCreator
     public UptimeStats() {
         this.runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-        jvmUptime_Ms = runtimeMXBean.getUptime();
+        jvmUptimeMs = runtimeMXBean.getUptime();
         DateFormat df = new SimpleDateFormat("dd:MM:yy:HH:mm:ss");
         jvmStartTime = df.format(new Date(runtimeMXBean.getStartTime()));
     }

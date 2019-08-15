@@ -20,13 +20,13 @@ public class MemoryStats {
 	private double availableRamMb;
 	
 	@JsonProperty
-	private MemoryByType memoryByTypes[] = new MemoryByType[2];
+	private MemoryByType memoryByTypes[] = new MemoryByType[3];
 	
 	@JsonCreator
 	public MemoryStats() {
 	      for (MemoryPoolMXBean memoryPoolBean : ManagementFactory.getPlatformMXBeans(MemoryPoolMXBean.class)) {
 	            String area = MemoryType.HEAP.equals(memoryPoolBean.getType()) ? "heap" : "nonheap"; //G1 Eden Space, G1 Old Gen, 
-	            System.out.println(area + ": " + memoryPoolBean.getName());
+//	            System.out.println(area + ": " + memoryPoolBean.getName());
 	            
 	            if (memoryPoolBean.getName().equals("G1 Eden Space"))
 	            {
@@ -36,6 +36,10 @@ public class MemoryStats {
 	            {
 	            	MemoryUsage memoryUsage = memoryPoolBean.getUsage();
 	            	memoryByTypes[1] = new MemoryByType("G1 Old Gen", memoryUsage.getUsed()/(1024*1024), memoryUsage.getCommitted()/(1024*1024));
+	            } else if (memoryPoolBean.getName().equals("G1 Survivor Space"))
+	            {
+	            	MemoryUsage memoryUsage = memoryPoolBean.getUsage();
+	            	memoryByTypes[2] = new MemoryByType("G1 Survivor Space", memoryUsage.getUsed()/(1024*1024), memoryUsage.getCommitted()/(1024*1024));	            	
 	            }
 
 	      }

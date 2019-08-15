@@ -41,9 +41,9 @@ public class TomcatStats {
     @JsonProperty
     private int requestCount;
     @JsonProperty
-    private long cumulativeProcessingTime;
+    private long cumulativeProcessingTimeMs;
     @JsonProperty
-    private long longestRequestProcessingTime;
+    private long longestRequestProcessingTimeMs;
     
     
     @JsonCreator
@@ -75,8 +75,8 @@ public class TomcatStats {
             	{
             		errorCount = ((Integer) mBeanServer.getAttribute(objectName, "errorCount")).intValue();
             		requestCount = ((Integer) mBeanServer.getAttribute(objectName, "requestCount")).intValue();
-            		cumulativeProcessingTime = ((Long) mBeanServer.getAttribute(objectName, "processingTime")).longValue();
-            		longestRequestProcessingTime = ((Long) mBeanServer.getAttribute(objectName, "maxTime")).longValue();
+            		cumulativeProcessingTimeMs = ((Long) mBeanServer.getAttribute(objectName, "processingTime")).longValue();
+            		longestRequestProcessingTimeMs = ((Long) mBeanServer.getAttribute(objectName, "maxTime")).longValue();
             	}
             }
             

@@ -4,14 +4,18 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.management.NotificationEmitter;
 import javax.management.NotificationListener;
 import javax.management.openmbean.CompositeData;
+
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -22,27 +26,29 @@ public class GCStats {
 
     private String youngPoolName;
     private String oldPoolName;
-    private ArrayList<GCInfo> registry = new ArrayList<>();
+    private CircularFifoQueue<GCInfo> registry = new CircularFifoQueue<GCInfo>(100);
 
     public GCStats() {
         for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
-            String name = mbean.getName();
-
+           String name = mbean.getName();
+ //           System.out.println("GCStats - MemoryPoolMXBean: " + name);
             if (isYoungGenPool(name))
                 youngPoolName = name;
             else if (isOldGenPool(name))
                 oldPoolName = name;
-        }
 
+        }
+        final AtomicLong youngGenSizeAfter = new AtomicLong(0L);
+ 
         for(GarbageCollectorMXBean mbean: ManagementFactory.getGarbageCollectorMXBeans()) {
             if (!(mbean instanceof NotificationEmitter))
                 continue;
 
+//            System.out.println("GarbageCollectorMXBean: " + mbean.getName() + "\nCollection Count: " + mbean.getCollectionCount() + "\nCollection Time: " + mbean.getCollectionTime() );
             NotificationListener listener = (notification, ref) -> {
-                long oldBeforeMb = 0L;
                 long oldAfterMb = 0L;
-                long youngBeforeMb = 0L;
                 long youngAfterBytes = 0L;
+                long youngBytes = 0L;
 
                 if(!notification.getType().equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION))
                   return;
@@ -60,17 +66,21 @@ public class GCStats {
                 final Map<String, MemoryUsage> after = gcInfo.getMemoryUsageAfterGc();
 
                 if(oldPoolName != null) {
-                  oldBeforeMb = before.get(oldPoolName).getUsed()/ (1024*1024);
                   oldAfterMb = after.get(oldPoolName).getUsed()/ (1024*1024);
+//                  System.out.println("MB promoted in old gen: " + (oldAfterMb - oldBeforeMb));
                 }
 
                 if (youngPoolName != null) {
-                   youngBeforeMb  = before.get(youngPoolName).getUsed() / (1024*1024);
                     youngAfterBytes = after.get(youngPoolName).getUsed();
+                    youngBytes = (before.get(youngPoolName).getUsed() - youngGenSizeAfter.get())/(1024*1024);
+                    youngGenSizeAfter.set(youngAfterBytes);
+//                    if (delta > 0L)
+//                    	System.out.println("Bytes increased in young pool: " + delta);
                 }
-
+                synchronized (this) {
                 if (!isConcurrentPhase(gcCause)) {
-                    registry.add(new GCInfo(duration, oldBeforeMb, oldAfterMb, youngBeforeMb, youngAfterBytes, gcCause, gcAction ));
+                    registry.add(new GCInfo(duration, oldAfterMb, youngBytes, gcCause, gcAction ));
+                }
                 }
             };
 
@@ -81,12 +91,14 @@ public class GCStats {
 
     public List<GCInfo> getGCInfo() {
         ArrayList<GCInfo> gcInfos = new ArrayList<>();
-        ListIterator<GCInfo> iterator = registry.listIterator();
+        synchronized(this) {
+        Iterator<GCInfo> iterator = registry.iterator();
         while (iterator.hasNext())
         {
             gcInfos.add(iterator.next());
         }
-
+        registry.clear();
+        }
         return gcInfos;
     }
 
@@ -112,33 +124,30 @@ public class GCStats {
 
         @JsonProperty
         private long gcPauseTimeMs;
-        @JsonProperty
-        private long oldSizeBeforeGC_Mb;
-        @JsonProperty
-        private long oldSizeAfterGC_Mb;
-        @JsonProperty
-        private long newSizeBeforeGC_Mb;
-        @JsonProperty
-        private long newSizeAfterGC_Bytes;
 
+        @JsonProperty
+        private long permGenSizeMb;
+        @JsonProperty
+        private long edenSizeMb;
+
+        @JsonProperty
+        private Timestamp creationTimestamp;
+        
         @JsonCreator
         public GCInfo(
                 final long gcPauseTimeMs,
-                final long oldSizeBeforeGC_Mb,
-                final long oldSizeAfterGC,
-                final long newSizeBeforeGC_Mb,
-                final long newSizeAfterGC_Bytes,
+                final long permGenSizeMb,
+                final long edenSizeMb,
                 final String gcCause,
                 final String gcAction
         )
         {
             this.gcPauseTimeMs = gcPauseTimeMs;
-            this.newSizeAfterGC_Bytes = newSizeAfterGC_Bytes;
-            this.newSizeBeforeGC_Mb = newSizeBeforeGC_Mb;
-            this.oldSizeAfterGC_Mb = oldSizeAfterGC;
-            this.oldSizeBeforeGC_Mb = oldSizeBeforeGC_Mb;
+            this.edenSizeMb = edenSizeMb;
+            this.permGenSizeMb = permGenSizeMb;
             this.gcCause = gcCause;
             this.gcAction = gcAction;
+            creationTimestamp = new Timestamp(System.currentTimeMillis());
         }
      }
 }
