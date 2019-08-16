@@ -8,6 +8,7 @@ import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 
+import com.example.demo.util.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -24,7 +25,7 @@ public class MemoryStats {
 	private MemoryByType memoryByTypes[] = new MemoryByType[3];
 	
 	@JsonProperty
-	private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
+	private String eventTime = TimeUtils.now();
 	
 	@JsonCreator
 	public MemoryStats() {

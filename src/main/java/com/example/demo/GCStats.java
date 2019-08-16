@@ -20,6 +20,7 @@ import javax.management.openmbean.CompositeData;
 import org.apache.commons.collections4.QueueUtils;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 
+import com.example.demo.util.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -164,7 +165,7 @@ public class GCStats {
         private long edenSizeMb;
 
         @JsonProperty
-        private Timestamp creationTimestamp;
+        private String creationTimestamp;
         
         @JsonCreator
         public GCInfo(
@@ -180,7 +181,7 @@ public class GCStats {
             this.permGenSizeMb = permGenSizeMb;
             this.gcCause = gcCause;
             this.gcAction = gcAction;
-            creationTimestamp = new Timestamp(System.currentTimeMillis());
+            creationTimestamp = TimeUtils.now();
         }
      }
      
@@ -222,18 +223,18 @@ public class GCStats {
     	 @JsonIgnore
     	 private AtomicLong counter = new AtomicLong(0L);
     	 @JsonProperty
-    	 private Timestamp timestamp;
+    	 private String timestamp;
     	 
     	 
     	 @JsonCreator
     	 public GCSummary() {
-    		 timestamp = new Timestamp(System.currentTimeMillis());
+    		 timestamp = TimeUtils.now();
     	 }
     	 
     	 @JsonIgnore
     	 public void increment() {
     		 counter.incrementAndGet();
-    		 timestamp = new Timestamp(System.currentTimeMillis());
+    		 timestamp = TimeUtils.now();
     	 }
     	 
     	 @JsonProperty

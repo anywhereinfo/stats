@@ -9,9 +9,11 @@ import java.lang.reflect.Method;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
+import java.time.Instant;
 
 import javax.annotation.Nullable;
 
+import com.example.demo.util.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,7 +46,7 @@ public class CPUStats {
     @JsonProperty
     private double processCPUUsage;
     @JsonProperty
-    private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
+    private String eventTime = TimeUtils.now();
 
     @JsonCreator
     public CPUStats() {

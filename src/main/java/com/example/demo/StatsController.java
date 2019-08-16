@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.GCStats.GCDetail;
+import com.example.demo.util.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @RestController
@@ -38,7 +39,7 @@ public class StatsController {
 		private String id = UUID.randomUUID().toString();
 		
 		@JsonProperty
-		private Timestamp eventTimestamp = new Timestamp(System.currentTimeMillis());
+		private String eventTimestamp = TimeUtils.now();
 		
 		@JsonProperty
         private UptimeStats uptimeStats = new UptimeStats();

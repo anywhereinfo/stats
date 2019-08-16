@@ -10,6 +10,7 @@ import javax.management.MBeanServerFactory;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
+import com.example.demo.util.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -46,7 +47,7 @@ public class TomcatStats {
     @JsonProperty
     private long longestRequestProcessingTimeMs;
     @JsonProperty
-    private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
+    private String eventTime =TimeUtils.now();
     
     @JsonCreator
     public TomcatStats()        {

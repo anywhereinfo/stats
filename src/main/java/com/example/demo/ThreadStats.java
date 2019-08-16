@@ -6,6 +6,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.demo.util.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -21,7 +22,7 @@ public class ThreadStats {
     @JsonProperty
     private List<String> blockedThreadNames = new ArrayList<>();
     @JsonProperty
-    private Timestamp eventTime = new Timestamp(System.currentTimeMillis());
+    private String eventTime = TimeUtils.now();
 
     @JsonCreator
     public ThreadStats() {
