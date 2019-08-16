@@ -4,7 +4,7 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
-import java.sql.Timestamp;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -32,7 +32,7 @@ public class GCStats {
 
     private String youngPoolName;
     private String oldPoolName;
-    private Queue<GCInfo> registry = QueueUtils.synchronizedQueue(new CircularFifoQueue<GCInfo>(20));
+    private Queue<GCInfo> registry = QueueUtils.synchronizedQueue(new CircularFifoQueue<GCInfo>(60));
     private Map<GCSummaryKey, GCSummary> map = new HashMap<GCSummaryKey, GCSummary>();
 
     public GCStats() {
@@ -46,7 +46,7 @@ public class GCStats {
 
         }
         final AtomicLong youngGenSizeAfter = new AtomicLong(0L);
- 
+        final AtomicLong counter = new AtomicLong(0L);
         for(GarbageCollectorMXBean mbean: ManagementFactory.getGarbageCollectorMXBeans()) {
             if (!(mbean instanceof NotificationEmitter))
                 continue;
@@ -96,8 +96,13 @@ public class GCStats {
                     youngGenSizeAfter.set(youngAfterBytes);
 
                 }
-
-                    registry.add(new GCInfo(duration, oldAfterMb, youngBytes, gcCause, gcAction ));
+                	long i = counter.incrementAndGet();
+                	if (i%5 ==0)
+                	{
+                		registry.add(new GCInfo(duration, oldAfterMb, youngBytes, gcCause, gcAction ));
+                		counter.set(0L);
+                	}
+                    
 
             };
 
@@ -114,7 +119,9 @@ public class GCStats {
         	Iterator<GCInfo> iterator = registry.iterator();
         	while (iterator.hasNext())
         	{
-        		gcInfos.add(iterator.next());
+        		GCInfo gcInfo = iterator.next();
+        		if (gcInfo != null)
+        			gcInfos.add(gcInfo);
         	}
         }
         synchronized(map) {
